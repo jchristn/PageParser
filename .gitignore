@@ -1,0 +1,25 @@
+# Build output
+[Bb]in/
+[Oo]bj/
+
+# Legacy NuGet restore folder (superseded by PackageReference)
+packages/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Rider
+.idea/
+
+# Test results
+[Tt]est[Rr]esults/
+*.trx
+
+# OS junk
+Thumbs.db
+.DS_Store
+
+# Stray VS temp artifacts
+DTAR_*/
