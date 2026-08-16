@@ -200,6 +200,12 @@ namespace Test.Shared
                     Check.Contains("tag-three", tags, "og:video:tag should contain tag-three");
                 }),
 
+                Case(MetaSuite, "DescriptionUrlDecoded", "GetMetaDescription URL-decodes the content value", () =>
+                {
+                    HtmlPageParser parser = HtmlPageParser.FromHtml(Html.EncodedMeta);
+                    Check.Equal("hello world & more", parser.GetMetaDescription(), "Meta description should be URL-decoded");
+                }),
+
                 // Negative cases
                 Case(MetaSuite, "DescriptionAbsent", "GetMetaDescription returns null when absent", () =>
                 {
@@ -343,6 +349,37 @@ namespace Test.Shared
                     Check.False(freq.ContainsKey("123"), "Numeric token '123' should not survive tokenization/filtering");
                     Check.True(freq.ContainsKey("cat"), "'cat' should still be present");
                 }),
+
+                Case(TokensSuite, "AscendingFrequencyOrder", "GetTokensWithFreq orders results by ascending frequency", () =>
+                {
+                    HtmlPageParser parser = HtmlPageParser.FromHtml(Html.Tokens);
+                    Dictionary<string, int> freq = parser.GetTokensWithFreq(1, 1, false, false, true);
+
+                    // Enumerate to inspect ordering. The highest-frequency token
+                    // ('cat', 3) must sort last; the first entry must not exceed it.
+                    int previous = int.MinValue;
+                    KeyValuePair<string, int> last = default(KeyValuePair<string, int>);
+                    foreach (KeyValuePair<string, int> kvp in freq)
+                    {
+                        Check.True(kvp.Value >= previous, "Frequencies should be non-decreasing across the ordered result");
+                        previous = kvp.Value;
+                        last = kvp;
+                    }
+                    Check.Equal("cat", last.Key, "Highest-frequency token should sort last");
+                    Check.Equal(3, last.Value, "'cat' frequency should be 3");
+                }),
+
+                Case(TokensSuite, "NonAlphaCharsStrippedWithinToken", "GetTokens strips non-alphabetic characters inside a token", () =>
+                {
+                    HtmlPageParser parser = HtmlPageParser.FromHtml(Html.TokensWithNonAlpha);
+                    List<string> tokens = parser.GetTokens();
+                    Check.Contains("cat", tokens, "'cat7' should strip to 'cat'");
+                    Check.Contains("dog", tokens, "'dog9' should strip to 'dog'");
+                    Check.DoesNotContain("cat7", tokens, "Digits should not survive inside a token");
+                    Check.DoesNotContain("dog9", tokens, "Digits should not survive inside a token");
+                    int catCount = tokens.FindAll(t => t == "cat").Count;
+                    Check.Equal(2, catCount, "'cat7' and 'cat' should both reduce to 'cat'");
+                }),
             };
 
             return new TestSuiteDescriptor(TokensSuite, "Tokenization", cases);
@@ -403,6 +440,28 @@ namespace Test.Shared
                     List<string> urls = parser.GetImageUrls();
                     Check.NotNull(urls, "Image URL list should never be null");
                     Check.Equal(0, urls.Count, "No images should yield an empty list");
+                }),
+
+                Case(ImagesSuite, "RelativeSkippedWithoutBaseUrl", "GetImageUrls skips relative images when no base URL is supplied", () =>
+                {
+                    // No base URL: only absolute (http) images and the absolute
+                    // og:image survive; every relative form is skipped.
+                    HtmlPageParser parser = HtmlPageParser.FromHtml(Html.Full);
+                    List<string> urls = parser.GetImageUrls();
+                    Check.Equal(2, urls.Count, "Only the absolute inline image and og:image should survive without a base URL");
+                    Check.Contains("https://cdn.example.com/absolute.png", urls, "Absolute image URL should be present");
+                    Check.Contains("https://cdn.example.com/og-image.png", urls, "og:image should be present");
+                    Check.DoesNotContain("https://example.com/root-relative.png", urls, "Root-relative image should be skipped without a base URL");
+                }),
+
+                Case(ImagesSuite, "TrailingSlashBaseUrlResolves", "GetImageUrls resolves relative images against a base URL ending in '/'", () =>
+                {
+                    HtmlPageParser parser = HtmlPageParser.FromHtml(Html.RelativeImages, "https://example.com/");
+                    List<string> urls = parser.GetImageUrls();
+                    Check.Equal(3, urls.Count, "All three relative image forms should resolve");
+                    Check.Contains("https://example.com/root.png", urls, "Root-relative image should resolve against a trailing-slash base URL");
+                    Check.Contains("https://example.com/proto.example.com/p.png", urls, "Protocol-relative image should resolve against a trailing-slash base URL");
+                    Check.Contains("https://example.com/dot.png", urls, "Dot-relative image should resolve against a trailing-slash base URL");
                 }),
             };
 

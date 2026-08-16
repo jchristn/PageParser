@@ -74,6 +74,32 @@ namespace Test.Shared
 @"<html><head><meta property=""og:image"" content=""https://cdn.example.com/only-og.png"" /></head><body>x</body></html>";
 
         /// <summary>
+        /// A document whose body contains only relative image URLs (root-,
+        /// protocol-, and dot-relative). Used to exercise base-URL resolution,
+        /// including the branch where no base URL is supplied.
+        /// </summary>
+        public const string RelativeImages =
+@"<html><body>
+    <img src=""/root.png"" alt=""root"" />
+    <img src=""//proto.example.com/p.png"" alt=""proto"" />
+    <img src=""./dot.png"" alt=""dot"" />
+</body></html>";
+
+        /// <summary>
+        /// A document whose meta description contains URL-encoded content, used
+        /// to verify the getters URL-decode their values.
+        /// </summary>
+        public const string EncodedMeta =
+@"<html><head><meta name=""description"" content=""hello%20world%20%26%20more"" /></head><body>x</body></html>";
+
+        /// <summary>
+        /// A document whose body contains tokens with embedded non-alphabetic
+        /// characters, used to verify per-character stripping in GetTokens.
+        /// </summary>
+        public const string TokensWithNonAlpha =
+@"<html><head><title>t</title></head><body>cat7 dog9 cat</body></html>";
+
+        /// <summary>
         /// A completely empty string (valid input to FromHtml).
         /// </summary>
         public const string Empty = "";
